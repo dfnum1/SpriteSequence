@@ -206,6 +206,7 @@ namespace Framework.SpriteSeq
             if (GUILayout.Button("定位"))
             {
                 GUI.FocusControl(null);
+                EditorUtility.SetDirty(m_pData);
                 Selection.activeObject = m_pData;
             }
             if (GUILayout.Button("说明文档"))
@@ -216,6 +217,7 @@ namespace Framework.SpriteSeq
             if (GUILayout.Button("刷新视图"))
             {
                 GUI.FocusControl(null);
+                EditorUtility.SetDirty(m_pData);
                 RefreshRender();
             }
             GUILayout.EndHorizontal();

@@ -50,6 +50,7 @@ namespace Framework.SpriteSeq
         public int indexPerFrame;
         public List<SubSequence> subSequeneces;
 
+        //--------------------------------------------------------
         public SubSequence GetSequence(string label)
         {
             if (string.IsNullOrEmpty(label))

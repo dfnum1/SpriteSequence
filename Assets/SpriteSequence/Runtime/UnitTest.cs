@@ -1,9 +1,10 @@
 /********************************************************************
-Éú³ÉÈÕÆÚ:	01:20:2026
-Àà    Ãû: 	UnitTest
-×÷    Õß:	HappLI
-Ãè    Êö:	µ¥Ôª²âÊÔ
+ç”Ÿæˆæ—¥æœŸ:	01:20:2026
+ç±»    å: 	UnitTest
+ä½œ    è€…:	HappLI
+æ    è¿°:	å•å…ƒæµ‹è¯•
 *********************************************************************/
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Framework.SpriteSeq
@@ -17,12 +18,14 @@ namespace Framework.SpriteSeq
         public GameObject chengbaoPrefab;
 
         SpriteSequenceManager m_Mgr = new SpriteSequenceManager();
+        private System.Collections.Generic.Dictionary<Vector3, KeyValuePair<int,int>> m_vPosition = null;
 
         private void Awake()
         {
             Application.targetFrameRate = 120;
             if(useGPUInstancing)
             {
+                m_vPosition = new System.Collections.Generic.Dictionary<Vector3, KeyValuePair<int, int>>(testCount);
                 int guid = 0;
                 for (int i = 0; i < testCount; ++i)
                 {
@@ -38,6 +41,8 @@ namespace Framework.SpriteSeq
                     var color = UnityEngine.Random.ColorHSV();
                     m_Mgr.SetColor(guidMain, color);
                     m_Mgr.SetColor(fengche, color);
+
+                    m_vPosition[pos] = new KeyValuePair<int, int>(guidMain, fengche);
                 }
             }
             else
@@ -60,7 +65,40 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         private void Update()
         {
-            if(useGPUInstancing) m_Mgr.Render(Camera.main);
+            if (useGPUInstancing)
+            {
+                Camera cam = Camera.main;
+                m_Mgr.Render(cam);
+                if(Input.GetMouseButtonUp(0))
+                {
+                    Vector3 mousePos = Input.mousePosition;
+
+                    // è®¾å®šä¸€ä¸ªç‚¹å‡»åˆ¤å®šåŠå¾„
+                    float pickRadius = 20.0f;
+
+                    bool bHit = false;
+                    Vector3 hitPos = Vector3.zero;
+                    KeyValuePair<int,int> removeGuid = default;
+                    foreach (var db in m_vPosition)
+                    {
+                        Vector3 screen = cam.WorldToScreenPoint(db.Key);
+                        float dist = Vector2.Distance(new Vector2(screen.x, screen.y), new Vector2(mousePos.x, mousePos.y));
+                        if (dist < pickRadius)
+                        {
+                            removeGuid = db.Value;
+                            bHit = true;
+                            hitPos = db.Key;
+                            break;
+                        }
+                    }
+                    if (bHit)
+                    {
+                        m_Mgr.RemoveSequence(removeGuid.Key);
+                        m_Mgr.RemoveSequence(removeGuid.Value);
+                        m_vPosition.Remove(hitPos);
+                    }
+                }
+            }
         }
         //--------------------------------------------------------
         void OnGUI()

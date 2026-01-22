@@ -1,14 +1,12 @@
 /********************************************************************
-…˙≥…»’∆⁄:	01:20:2026
-¿‡    √˚: 	FrameSequenceRenderer
-◊˜    ’ﬂ:	HappLI
-√Ë     ˆ:	ª˘”⁄Spriteµƒ–Ú¡–÷°‰÷»æ∆˜
+ÁîüÊàêÊó•Êúü:	01:20:2026
+Á±ª    Âêç: 	FrameSequenceRenderer
+‰Ωú    ËÄÖ:	HappLI
+Êèè    Ëø∞:	Âü∫‰∫éSpriteÁöÑÂ∫èÂàóÂ∏ßÊ∏≤ÊüìÂô®
 *********************************************************************/
 using System.Collections.Generic;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -19,107 +17,6 @@ namespace Framework.SpriteSeq
     //--------------------------------------------------------
     internal class FrameSequenceRenderer
     {
-        [BurstCompile]
-        struct SortUpdateJob : IJob
-        {
-            public NativeArray<DrawData> drawDatas;
-            public int count;
-            public void Execute()
-            {
-                HeapSort(drawDatas, count);
-            }
-            void HeapSort(NativeArray<DrawData> arr, int n)
-            {
-                // ππΩ®◊Ó¥Û∂—
-                for (int i = n / 2 - 1; i >= 0; i--)
-                    Heapify(arr, n, i);
-
-                // “ª∏ˆ∏ˆ»°≥ˆ‘™Àÿ
-                for (int i = n - 1; i > 0; i--)
-                {
-                    Swap(arr, 0, i);
-                    Heapify(arr, i, 0);
-                }
-            }
-
-            void Heapify(NativeArray<DrawData> arr, int n, int i)
-            {
-                int largest = i;
-                int l = 2 * i + 1;
-                int r = 2 * i + 2;
-
-                if (l < n && arr[l].order > arr[largest].order)
-                    largest = l;
-                if (r < n && arr[r].order > arr[largest].order)
-                    largest = r;
-
-                if (largest != i)
-                {
-                    Swap(arr, i, largest);
-                    Heapify(arr, n, largest);
-                }
-            }
-
-            void Swap(NativeArray<DrawData> arr, int a, int b)
-            {
-                if (a == b) return;
-                DrawData tmp = arr[a];
-                arr[a] = arr[b];
-                arr[b] = tmp;
-            }
-        }
-
-        [BurstCompile]
-        struct FrameUpdateJob : IJob
-        {
-            public NativeArray<DrawData> drawDatas;
-            public float dt;
-            public float fps;
-            public int drawCount;
-            public bool cullingCheck;
-            public float4x4 cullingMatrix;
-
-            public void Execute()
-            {
-                for(int i =0; i < drawDatas.Length && i < drawCount; ++i)
-                {
-                    DrawData batch = drawDatas[i];
-
-                    if (cullingCheck)
-                    {
-                        Vector3 pos = batch.matrix.GetColumn(3);
-                        pos.x += batch.centerOffset.x;
-                        pos.y += batch.centerOffset.y;
-                        batch.isCulled = !InView(cullingMatrix, pos.x, pos.y);
-                        if(batch.cullingSize>0 && batch.isCulled) 
-                        {
-                            if(InView(cullingMatrix, pos.x - batch.cullingSize, pos.y - batch.cullingSize)) batch.isCulled = false;
-                            else if (InView(cullingMatrix, pos.x + batch.cullingSize, pos.y - batch.cullingSize)) batch.isCulled = false;
-                            else if (InView(cullingMatrix, pos.x + batch.cullingSize, pos.y + batch.cullingSize)) batch.isCulled = false;
-                            else if (InView(cullingMatrix, pos.x - batch.cullingSize, pos.y + batch.cullingSize)) batch.isCulled = false;
-                        }
-                    }
-                    else batch.isCulled = false;
-                    //if (batch.isCulled)
-                    //    continue;
-
-                    batch.frame += dt * fps;
-                    if (batch.frame >= batch.sequenceEnd)
-                        batch.frame = batch.sequenceBegin;
-                    drawDatas[i] = batch;
-                }
-            }
-            public unsafe bool InView(float4x4 mvp, float posx, float posy, float fFactor =1.1f)
-            {
-                float4 mvpPos = math.mul(mvp, new float4(posx, posy, 0, 1));
-                float3 view = mvpPos.xyz / mvpPos.w;
-                bool inview = (view.x >= -fFactor && view.x <= fFactor)
-                              && (view.y >= -fFactor && view.y <= fFactor)
-                              && (view.z >= -fFactor && view.z <= fFactor);
-                return inview;
-            }
-        }
-
 #if UNITY_2022_1_OR_NEWER
         static int BatchMaxCount = 8191;
 #else
@@ -134,8 +31,9 @@ namespace Framework.SpriteSeq
         static int                  _MainTex = Shader.PropertyToID("_MainTex");
         static int                  _GPU_Frame_PixelSegmentation = Shader.PropertyToID("_GPU_Frame_PixelSegmentation");
         static int                  _GPU_Frame_ColorSegmentation = Shader.PropertyToID("_GPU_Frame_ColorSegmentation");
-        struct DrawData
+        public struct DrawData
         {
+            public int guid;
             public Matrix4x4 matrix;
             public float frame;
             public Vector4 color;
@@ -165,8 +63,7 @@ namespace Framework.SpriteSeq
         //! job
         JobHandle                   m_SeqFrameJobHandle;
 
-        Dictionary<int, int>        m_guidToIndex = null;
-        Dictionary<int, int>        m_indexToGuid = null;
+        NativeHashMap<int, int>     m_guidToIndex;
         //--------------------------------------------------------
         internal void SetData(SpriteSequenceData pData)
         {
@@ -228,13 +125,12 @@ namespace Framework.SpriteSeq
         {
             if(m_mpBlock!=null) m_mpBlock.Clear();
             m_nCount = 0;
-            m_indexToGuid?.Clear();
-            m_guidToIndex?.Clear();
+            if (m_guidToIndex.IsCreated) m_guidToIndex.Clear();
         }
         //--------------------------------------------------------
         public void AddSequence(int guid, string label, int order =0)
         {
-            if (m_guidToIndex!=null && m_guidToIndex.ContainsKey(guid))
+            if (m_guidToIndex.IsCreated && m_guidToIndex.ContainsKey(guid))
                 return;
 
             var subSequence = m_pData.GetSequence(label);
@@ -254,16 +150,15 @@ namespace Framework.SpriteSeq
                 m_arrNativeDraws = newArray;
             }
 
-            if (m_indexToGuid == null)
+            if (!m_guidToIndex.IsCreated)
             {
-                m_guidToIndex = new Dictionary<int, int>(BatchMaxCount);
-                m_indexToGuid = new Dictionary<int, int>(BatchMaxCount);
+                m_guidToIndex = new NativeHashMap<int, int>(BatchMaxCount, Allocator.Persistent);
             }
-            m_indexToGuid[m_nCount] = guid;
             m_guidToIndex[guid] = m_nCount;
             if (order == 0) order = subSequence.sortingOrder;
 
             DrawData draw = new DrawData();
+            draw.guid = guid;
             draw.matrix = Matrix4x4.identity;
             draw.color = Color.white;
             draw.frame = subSequence.beginFrame;
@@ -283,28 +178,24 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public void RemoveSequence(int guid)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int key))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
-                return;
+
+            m_guidToIndex.Remove(guid);
+
             int lastIdx = m_nCount - 1;
             if (idx != lastIdx)
             {
+                int lastGuid = m_arrNativeDraws[lastIdx].guid;
                 m_arrNativeDraws[idx] = m_arrNativeDraws[lastIdx];
-                if (m_indexToGuid.TryGetValue(lastIdx, out var slotGuid))
-                {
-                    m_guidToIndex[slotGuid] = idx;
-                    m_indexToGuid[idx] = slotGuid;
-                }
-                m_indexToGuid.Remove(idx);
-                m_guidToIndex.Remove(guid);
-                m_nCount--;
+                m_guidToIndex[lastGuid] = idx;
             }
+            m_nCount--;
         }
         //--------------------------------------------------------
         public void SetPosition(int guid, Vector3 pos)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             Quaternion rot = draw.matrix.rotation;
@@ -315,7 +206,7 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public void SetEulerAngle(int guid, Vector3 eulerAngle)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             Vector3 pos = draw.matrix.GetColumn(3);
@@ -326,7 +217,7 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public void SetScale(int guid, Vector3 scale)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             Vector3 pos = draw.matrix.GetColumn(3);
@@ -337,14 +228,14 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public Matrix4x4 GetWorldMatrix(int guid)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return Matrix4x4.identity;
             return m_arrNativeDraws[idx].matrix;
         }
         //--------------------------------------------------------
         public void SetColor(int guid, Color color)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             draw.color = color;
@@ -353,9 +244,10 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public void SetSortingOrder(int guid, int order)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
+            order = order + (int)(draw.matrix.GetPosition().z*100);
             if (draw.order == order)
                 return;
             draw.order = order;
@@ -365,7 +257,7 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public void SetCullingSize(int guid, float size)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             draw.cullingSize = size;
@@ -374,7 +266,7 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public void SetVisible(int guid, bool bVisible)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             draw.visible = bVisible;
@@ -383,14 +275,14 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         public bool IsVisible(int guid)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return false;
             return m_arrNativeDraws[idx].visible;
         }
         //--------------------------------------------------------
         public void SetSequenceRange(int guid, int begin, int end)
         {
-            if (m_guidToIndex == null || !m_guidToIndex.TryGetValue(guid, out int idx))
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
             var draw = m_arrNativeDraws[idx];
             draw.sequenceBegin = begin;
@@ -407,6 +299,7 @@ namespace Framework.SpriteSeq
                 var sortJob = new SortUpdateJob
                 {
                     drawDatas = m_arrNativeDraws,
+                    guideToIndexs = m_guidToIndex,
                     count = m_nCount
                 };
                 var jobDep = sortJob.Schedule();
@@ -547,6 +440,8 @@ namespace Framework.SpriteSeq
             {
                 m_arrNativeDraws.Dispose();
             }
+            if (m_guidToIndex.IsCreated)
+                m_guidToIndex.Dispose();
         }
     }
 }

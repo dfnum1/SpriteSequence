@@ -1,8 +1,8 @@
 /********************************************************************
-Éú³ÉÈÕÆÚ:	01:20:2026
-Àà    Ãû: 	SpriteSequenceManager
-×÷    Õß:	HappLI
-Ãè    Êö:	»ùÓÚSpriteµÄĞòÁĞÖ¡¶¯»­¹ÜÀíÀà
+ç”Ÿæˆæ—¥æœŸ:	01:20:2026
+ç±»    å: 	SpriteSequenceManager
+ä½œ    è€…:	HappLI
+æ    è¿°:	åŸºäºSpriteçš„åºåˆ—å¸§åŠ¨ç”»ç®¡ç†ç±»
 *********************************************************************/
 using System.Collections.Generic;
 using UnityEngine;
@@ -57,6 +57,7 @@ namespace Framework.SpriteSeq
                 {
                     renderer.RemoveSequence(guid);
                 }
+                m_vGuidKey.Remove(guid);
             }
         }
         //--------------------------------------------------------

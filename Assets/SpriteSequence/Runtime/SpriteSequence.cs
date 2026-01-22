@@ -1,8 +1,8 @@
 /********************************************************************
-Éú³ÉÈÕÆÚ:	01:20:2026
-Àà    Ãû: 	SpriteSequence
-×÷    Õß:	HappLI
-Ãè    Êö:	³£¹æµÄ»ùÓÚSpriteµÄĞòÁĞÖ¡¶¯»­²¥·Å×é¼ş
+ç”Ÿæˆæ—¥æœŸ:	01:20:2026
+ç±»    å: 	SpriteSequence
+ä½œ    è€…:	HappLI
+æ    è¿°:	å¸¸è§„çš„åŸºäºSpriteçš„åºåˆ—å¸§åŠ¨ç”»æ’­æ”¾ç»„ä»¶
 *********************************************************************/
 using System.Collections;
 using UnityEngine;
@@ -28,7 +28,7 @@ namespace Framework.SpriteSeq
         void Start()
         {
             if(spriteRender == null) spriteRender = GetComponent<SpriteRenderer>();
-            if (frames == null || frames.Length == 0) { Debug.LogError("Ã»ÕÒµ½Ö¡Í¼"); return; }
+            if (frames == null || frames.Length == 0) { Debug.LogError("æ²¡æ‰¾åˆ°å¸§å›¾"); return; }
             StartCoroutine(Play());
         }
         //----------------------------------------------
@@ -67,33 +67,41 @@ namespace Framework.SpriteSeq
         private void OnDisable()
         {
             EditorApplication.update -= OnUpdate;
+            if (Application.isPlaying) Object.Destroy(m_SpriteRenderEditor);
+            else Object.DestroyImmediate(m_SpriteRenderEditor);
+            m_SpriteRenderEditor = null;
         }
         //----------------------------------------------
         public override void OnInspectorGUI()
         {
             m_Atlas = EditorGUILayout.ObjectField("Sprite Atlas", m_Atlas, typeof(SpriteAtlas), false) as SpriteAtlas;
             SpriteSequence seq = (SpriteSequence)target;
-            seq.spriteRender = seq.GetComponent<SpriteRenderer>();
+            if (seq.spriteRender == null)
+                seq.spriteRender = seq.GetComponent<SpriteRenderer>();
+            if (seq.spriteRender)
+                seq.spriteRender.hideFlags |= HideFlags.HideInInspector;
 
             DrawDefaultInspector();
 
-            if (seq.spriteRender)
+            if (seq.spriteRender && !EditorUtility.IsPersistent(seq.spriteRender))
             {
-                seq.spriteRender.hideFlags |= HideFlags.HideInInspector;
                 if (m_SpriteRenderEditor == null)
+                {
                     m_SpriteRenderEditor = Editor.CreateEditor(seq.spriteRender);
+                    m_SpriteRenderEditor.ResetTarget();
+                }
                 if (m_SpriteRenderEditor != null)
                 {
                     EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("SpriteRenderer ÊôĞÔ", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("SpriteRenderer å±æ€§", EditorStyles.boldLabel);
                     m_SpriteRenderEditor.OnInspectorGUI();
                 }
             }
             if (m_Atlas!=null)
             {
-                if(GUILayout.Button(("ºæ±º")))
+                if(GUILayout.Button(("çƒ˜ç„™")))
                 {
-                    // »ñÈ¡±êÇ©¶ÔÓ¦µÄSpriteÁĞ±í
+                    // è·å–æ ‡ç­¾å¯¹åº”çš„Spriteåˆ—è¡¨
                     var spriteList = new System.Collections.Generic.List<Sprite>();
                     var spriteArray = new Sprite[ m_Atlas.spriteCount];
                     m_Atlas.GetSprites(spriteArray);
@@ -101,7 +109,7 @@ namespace Framework.SpriteSeq
                     var selectedSprites = spriteList.FindAll(s => s.name.Replace("(Clone)","").StartsWith(seq.spriteLabel));
                     if (selectedSprites.Count == 0)
                     {
-                        Debug.LogError("Ã»ÓĞÕÒµ½¶ÔÓ¦±êÇ©µÄSprite");
+                        Debug.LogError("æ²¡æœ‰æ‰¾åˆ°å¯¹åº”æ ‡ç­¾çš„Sprite");
                         return;
                     }
 
@@ -109,7 +117,7 @@ namespace Framework.SpriteSeq
                     EditorUtility.SetDirty(seq);
                 }
             }
-            if(GUILayout.Button(m_bPreview?"Í£Ö¹²¥·Å":"Ô¤ÀÀ²¥·Å"))
+            if(GUILayout.Button(m_bPreview?"åœæ­¢æ’­æ”¾":"é¢„è§ˆæ’­æ”¾"))
             {
                 m_fPlayTime = 0;
                 m_bPreview = !m_bPreview;
@@ -129,7 +137,7 @@ namespace Framework.SpriteSeq
             System.Collections.Generic.List<Sprite> vFrames = new System.Collections.Generic.List<Sprite>();
             foreach (var item in packables)
             {
-                if (item is DefaultAsset) // ÎÄ¼ş¼Ğ
+                if (item is DefaultAsset) // æ–‡ä»¶å¤¹
                 {
                     string folderPath = AssetDatabase.GetAssetPath(item);
                     string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { folderPath });

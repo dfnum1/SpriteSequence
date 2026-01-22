@@ -246,8 +246,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8e16749110dcb240beb0163ca649962, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  useGPUInstancing: 0
   data: {fileID: 11400000, guid: b4bf61f8d2a48954f8760f5b3f9a8786, type: 2}
-  testCount: 5000
+  testCount: 10000
+  chengbaoPrefab: {fileID: 5328658791080172000, guid: c0046c0aadce1464fb39be797be9233c, type: 3}
 --- !u!4 &752572911
 Transform:
   m_ObjectHideFlags: 0
@@ -256,7 +258,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 752572909}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -356}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

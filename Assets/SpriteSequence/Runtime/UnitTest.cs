@@ -10,30 +10,46 @@ namespace Framework.SpriteSeq
 {
     public class UnitTest : MonoBehaviour
     {
+        public bool useGPUInstancing = true;
         public SpriteSequenceData data;
         public int testCount = 100;
+
+        public GameObject chengbaoPrefab;
 
         SpriteSequenceManager m_Mgr = new SpriteSequenceManager();
 
         private void Awake()
         {
             Application.targetFrameRate = 120;
-            //帮我随机生成一些测试数据，并设置位置
-            int guid = 0;
-            for (int i=0; i< testCount; ++i)
+            if(useGPUInstancing)
             {
-                int guidMain = guid++;
-                int fengche = guid++;
-                m_Mgr.AddSequence(guidMain, data,"main");
-                m_Mgr.AddSequence(fengche, data,"200");
-                Vector3 pos = new Vector3(Random.Range(-100.0f, 100.0f), Random.Range(-50.0f, 50.0f), Random.Range(-50.0f, 50.0f));
-                m_Mgr.SetPosition(guidMain, pos);
-                m_Mgr.SetPosition(fengche, pos);
-                m_Mgr.SetScale(guidMain, Vector3.one);
-                m_Mgr.SetScale(fengche, Vector3.one);
-                var color = UnityEngine.Random.ColorHSV();
-                m_Mgr.SetColor(guidMain, color);
-                m_Mgr.SetColor(fengche, color);
+                int guid = 0;
+                for (int i = 0; i < testCount; ++i)
+                {
+                    int guidMain = guid++;
+                    int fengche = guid++;
+                    m_Mgr.AddSequence(guidMain, data, "main");
+                    m_Mgr.AddSequence(fengche, data, "200");
+                    Vector3 pos = new Vector3(Random.Range(-100.0f, 100.0f), Random.Range(-50.0f, 50.0f), Random.Range(-50.0f, 50.0f));
+                    m_Mgr.SetPosition(guidMain, pos);
+                    m_Mgr.SetPosition(fengche, pos);
+                    m_Mgr.SetScale(guidMain, Vector3.one);
+                    m_Mgr.SetScale(fengche, Vector3.one);
+                    var color = UnityEngine.Random.ColorHSV();
+                    m_Mgr.SetColor(guidMain, color);
+                    m_Mgr.SetColor(fengche, color);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < testCount; ++i)
+                {
+                    var chebao = GameObject.Instantiate(chengbaoPrefab);
+                    chebao.transform.position = new Vector3(Random.Range(-100.0f, 100.0f), Random.Range(-50.0f, 50.0f), Random.Range(-50.0f, 50.0f));
+                    var color = UnityEngine.Random.ColorHSV();
+                    chebao.GetComponent<SpriteRenderer>().color = color;
+                    chebao.GetComponentInChildren<SpriteRenderer>().color = color;
+                }
             }
         }
         //--------------------------------------------------------
@@ -44,7 +60,7 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         private void Update()
         {
-            m_Mgr.Render(Camera.main);
+            if(useGPUInstancing) m_Mgr.Render(Camera.main);
         }
         //--------------------------------------------------------
         void OnGUI()

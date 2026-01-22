@@ -147,7 +147,7 @@ namespace Framework.SpriteSeq
                 GeneAtlas(m_pData.altas);
                 GeneUvPackTextureSubAsset(sprites);
                 // 为索引纹理创建浮点数组
-                Color[] indexData = new Color[m_pData.indexPerFrame * sprites.Length];
+                Color[] indexData = m_pData.vtIndex.GetPixels();
 
                 Color[] pixels = m_pData.vtPack.GetPixels();
                 for (int i = 0; i < pixels.Length; ++i)
@@ -428,8 +428,11 @@ namespace Framework.SpriteSeq
             if (atlasTex == null)
                 return;
 
+            int width = atlasTex.width;
+            int height = atlasTex.height;
+
             // 新建一张同尺寸同格式的贴图
-            Texture2D atlasClone = new Texture2D(atlasTex.width, atlasTex.height, atlasTex.format, atlasTex.mipmapCount > 1);
+            Texture2D atlasClone = new Texture2D(width, height, atlasTex.format, atlasTex.mipmapCount > 1);
             atlasClone.name = "AtlasTexture";
             atlasClone.hideFlags = HideFlags.None;
 
@@ -456,7 +459,8 @@ namespace Framework.SpriteSeq
             if (packField == null)
                 return;
 
-            var vt = new Texture2D(maxVtx, sprites.Length, TextureFormat.RGBAHalf, false, false);
+
+            var vt = new Texture2D(GetTexSize(maxVtx), GetTexSize(sprites.Length), TextureFormat.RGBAHalf, false, false);
             vt.name = "vtPack";
             vt.wrapMode = TextureWrapMode.Clamp;
             vt.filterMode = FilterMode.Point;
@@ -471,7 +475,7 @@ namespace Framework.SpriteSeq
             if (vtIndexField == null)
                 return;
 
-            var vtIdx = new Texture2D(maxIdx, sprites.Length, TextureFormat.RFloat, false, false);
+            var vtIdx = new Texture2D(GetTexSize(maxIdx), GetTexSize(sprites.Length), TextureFormat.RFloat, false, false);
             vtIdx.name = "vtIndex";
             vtIdx.wrapMode = TextureWrapMode.Clamp;
             vtIdx.filterMode = FilterMode.Point;
@@ -496,6 +500,7 @@ namespace Framework.SpriteSeq
         //--------------------------------------------------------
         private int GetTexSize(int spriteCount)
         {
+            return spriteCount;
             int size = 1;
             while (true)
             {

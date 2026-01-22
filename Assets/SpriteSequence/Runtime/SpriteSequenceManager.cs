@@ -229,6 +229,16 @@ namespace Framework.SpriteSeq
             }
         }
         //--------------------------------------------------------
+        public void Clear()
+        {
+            if (m_vRenders == null)
+                return;
+            foreach (var renderer in m_vRenders)
+            {
+                renderer.Value.ClearSequence();
+            }
+        }
+        //--------------------------------------------------------
         public void Destroy()
         {
             if (m_vRenders == null)

@@ -248,7 +248,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   useGPUInstancing: 1
   data: {fileID: 11400000, guid: b4bf61f8d2a48954f8760f5b3f9a8786, type: 2}
-  testCount: 100
+  testCount: 500
   chengbaoPrefab: {fileID: 5328658791080172000, guid: c0046c0aadce1464fb39be797be9233c, type: 3}
 --- !u!4 &752572911
 Transform:

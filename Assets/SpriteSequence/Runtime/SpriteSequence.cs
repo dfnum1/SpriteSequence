@@ -18,30 +18,83 @@ namespace Framework.SpriteSeq
     [RequireComponent(typeof(SpriteRenderer))]
     public class SpriteSequence : MonoBehaviour
     {
-        public string spriteLabel = "";
-        public float fps = 12f;
-        public bool loop = true;
+        [System.Serializable]
+        public class SubSequence
+        {
+            public string label;
+            public bool loop;
+            public float fps = 12f;
+#if UNITY_EDITOR
+            public SpriteAtlas spriteAtlas;
+            public bool bExpand;
+#endif
+            public Sprite[] frames;
+            public bool IsValid()
+            {
+                return !string.IsNullOrEmpty(label);
+            }
+        }
+        public byte currentSub = 0;
+
         public SpriteRenderer spriteRender;
-        public Sprite[] frames;
+        public SubSequence[] subSequences;
         int m_nIndex;
+        int m_nSubSeqIndex = -1;
+        bool m_bPlaying = false;
         //----------------------------------------------
         void Start()
         {
             if(spriteRender == null) spriteRender = GetComponent<SpriteRenderer>();
-            if (frames == null || frames.Length == 0) { Debug.LogError("没找到帧图"); return; }
+            if (subSequences == null || subSequences.Length == 0) { Debug.LogError("没找到帧图"); return; }
+            m_nSubSeqIndex = currentSub;
             StartCoroutine(Play());
+        }
+        //----------------------------------------------
+        public void PlaySequence(string label)
+        {
+            if (subSequences == null || subSequences.Length <= 0)
+                return;
+            int useIndex = -1;
+            for(int i=0; i< subSequences.Length; ++i)
+            {
+                if (subSequences[i].label.CompareTo(label) ==0)
+                {
+                    useIndex = i;
+                    break;
+                }
+            }
+            if (useIndex == m_nSubSeqIndex)
+                return;
+            m_nSubSeqIndex = useIndex;
+            m_nIndex = 0;
+            if(!m_bPlaying) StartCoroutine(Play());
         }
         //----------------------------------------------
         IEnumerator Play()
         {
-            var delay = new WaitForSeconds(1f / fps);
+            if (subSequences == null || subSequences.Length <= 0)
+                yield break;
+
+            if (m_nSubSeqIndex < 0 || m_nSubSeqIndex >= subSequences.Length)
+                yield break;
+
+                m_bPlaying = true;
+            var sequence = subSequences[m_nSubSeqIndex];
+            var delay = new WaitForSeconds(1f / Mathf.Max(1,sequence.fps));
             while (true)
             {
-                spriteRender.sprite = frames[m_nIndex];
-                m_nIndex = (m_nIndex + 1) % frames.Length;
-                if (!loop && m_nIndex == 0) break;
+                if (subSequences == null)
+                    break;
+                if (m_nSubSeqIndex < 0 || m_nSubSeqIndex >= subSequences.Length)
+                    break;
+                sequence = subSequences[m_nSubSeqIndex];
+
+                spriteRender.sprite = sequence.frames[m_nIndex];
+                m_nIndex = (m_nIndex + 1) % sequence.frames.Length;
+                if (!sequence.loop && m_nIndex == 0) break;
                 yield return delay;
             }
+            m_bPlaying = false;
         }
     }
     //----------------------------------------------
@@ -51,10 +104,10 @@ namespace Framework.SpriteSeq
     [CustomEditor(typeof(SpriteSequence))]
     public class SpriteSequenceInspectorEditor : Editor
     {
-        SpriteAtlas m_Atlas;
         Framework.ED.EditorTimer m_pTimer = new Framework.ED.EditorTimer();
         bool m_bPreview = false;
         float m_fPlayTime = 0;
+        int m_nPreviewSubIndex = 0;
         Editor m_SpriteRenderEditor = null;
         //----------------------------------------------
         private void OnEnable()
@@ -74,14 +127,11 @@ namespace Framework.SpriteSeq
         //----------------------------------------------
         public override void OnInspectorGUI()
         {
-            m_Atlas = EditorGUILayout.ObjectField("Sprite Atlas", m_Atlas, typeof(SpriteAtlas), false) as SpriteAtlas;
             SpriteSequence seq = (SpriteSequence)target;
             if (seq.spriteRender == null)
                 seq.spriteRender = seq.GetComponent<SpriteRenderer>();
             if (seq.spriteRender)
                 seq.spriteRender.hideFlags |= HideFlags.HideInInspector;
-
-            DrawDefaultInspector();
 
             if (seq.spriteRender && !EditorUtility.IsPersistent(seq.spriteRender))
             {
@@ -97,36 +147,119 @@ namespace Framework.SpriteSeq
                     m_SpriteRenderEditor.OnInspectorGUI();
                 }
             }
-            if (m_Atlas!=null)
+            Color color = GUI.color;
+            if(seq.subSequences!=null)
             {
-                if(GUILayout.Button(("烘焙")))
+                if(GUILayout.Button("新增子序列"))
                 {
-                    // 获取标签对应的Sprite列表
-                    var spriteList = new System.Collections.Generic.List<Sprite>();
-                    var spriteArray = new Sprite[ m_Atlas.spriteCount];
-                    m_Atlas.GetSprites(spriteArray);
-                    spriteList.AddRange(spriteArray);
-                    var selectedSprites = spriteList.FindAll(s => s.name.Replace("(Clone)","").StartsWith(seq.spriteLabel));
-                    if (selectedSprites.Count == 0)
-                    {
-                        Debug.LogError("没有找到对应标签的Sprite");
-                        return;
-                    }
-
-                    BuildFrames(selectedSprites);
+                    var newSubSeq = new SpriteSequence.SubSequence() { label = "NewSubSeq", loop = true, fps = 12f, frames = new Sprite[0] };
+                    var list = new System.Collections.Generic.List<SpriteSequence.SubSequence>(seq.subSequences);
+                    list.Add(newSubSeq);
+                    seq.subSequences = list.ToArray();
                     EditorUtility.SetDirty(seq);
                 }
+                for (int i = 0; i < seq.subSequences.Length; ++i)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    if (GUILayout.Button("-", GUILayout.Width(15)))
+                    {
+                        if(EditorUtility.DisplayDialog("提示", "确认删除该标签序列?","删除", "再想想"))
+                        {
+                            if (m_nPreviewSubIndex == i)
+                            {
+                                m_nPreviewSubIndex = -1;
+                                m_bPreview = false;
+                            }
+                            if (seq.currentSub == i)
+                            {
+                                seq.currentSub = 0xff;
+                            }
+                            var list = new System.Collections.Generic.List<SpriteSequence.SubSequence>(seq.subSequences);
+                            list.RemoveAt(i);
+                            seq.subSequences = list.ToArray();
+                            EditorUtility.SetDirty(seq);
+                            EditorGUILayout.EndHorizontal();
+                            break;
+                        }
+                    }
+                    GUI.color = seq.currentSub == i ? Color.green : color;
+                    GUILayout.Space(10);
+                    seq.subSequences[i].bExpand = EditorGUILayout.Foldout(seq.subSequences[i].bExpand, seq.subSequences[i].label);
+                    if (GUILayout.Button("设为默认"))
+                    {
+                        seq.currentSub = (byte)i;
+                    }
+                    if (GUILayout.Button(m_bPreview ? "停止播放" : "预览播放"))
+                    {
+                        m_nPreviewSubIndex = i;
+                        m_fPlayTime = 0;
+                        m_bPreview = !m_bPreview;
+                    }
+                    EditorGUILayout.EndHorizontal();
+                    GUI.color = color;
+                    if (seq.subSequences[i].bExpand)
+                    {
+                        EditorGUI.indentLevel++;
+                        seq.subSequences[i] = DrawSpriteSequene(seq.subSequences[i]);
+                        EditorGUI.indentLevel--;
+                    }
+                    if (string.IsNullOrEmpty(seq.subSequences[i].label))
+                    {
+                        EditorGUILayout.HelpBox($"标签名不能为空！", MessageType.Error);
+                    }
+                    else if(seq.subSequences[i].frames!=null)
+                    {
+                        for(int j= 0;j < seq.subSequences[i].frames.Length; ++j)
+                        {
+                            if (seq.subSequences[i].frames[j] == null)
+                            {
+                                EditorGUILayout.HelpBox($"帧序列中第 {j} 帧为空，请重新烘焙！", MessageType.Error);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
-            if(GUILayout.Button(m_bPreview?"停止播放":"预览播放"))
+            if (GUILayout.Button("说明文档"))
             {
-                m_fPlayTime = 0;
-                m_bPreview = !m_bPreview;
+                Application.OpenURL("https://docs.qq.com/doc/DTGVoRnBxa0NrT2RQ");
             }
         }
         //----------------------------------------------
-        void BuildFrames(System.Collections.Generic.List<Sprite> sprites)
+        SpriteSequence.SubSequence DrawSpriteSequene(SpriteSequence.SubSequence sequence)
         {
-            var packables = SpriteAtlasExtensions.GetPackables(m_Atlas);
+            SpriteSequence seq = (SpriteSequence)target;
+            sequence.label = EditorGUILayout.TextField("标签", sequence.label);
+            sequence.loop = EditorGUILayout.Toggle("循环播放", sequence.loop);
+            sequence.fps = EditorGUILayout.FloatField("帧率", sequence.fps);
+            EditorGUILayout.LabelField("帧数:", sequence.frames != null ? sequence.frames.Length.ToString() : "0");
+            sequence.spriteAtlas = EditorGUILayout.ObjectField("Sprite 图集", sequence.spriteAtlas, typeof(SpriteAtlas), false) as SpriteAtlas;
+            if (sequence.spriteAtlas != null)
+            {
+                if (GUILayout.Button(("烘焙")))
+                {
+                    // 获取标签对应的Sprite列表
+                    var spriteList = new System.Collections.Generic.List<Sprite>();
+                    var spriteArray = new Sprite[sequence.spriteAtlas.spriteCount];
+                    sequence.spriteAtlas.GetSprites(spriteArray);
+                    spriteList.AddRange(spriteArray);
+                    var selectedSprites = spriteList.FindAll(s => s.name.Replace("(Clone)", "").StartsWith(sequence.label));
+                    if (selectedSprites.Count == 0)
+                    {
+                        Debug.LogError("没有找到对应标签的Sprite");
+                        return sequence;
+                    }
+
+                    sequence.frames = BuildFrames(sequence.spriteAtlas, sequence.label, selectedSprites);
+                    EditorUtility.SetDirty(seq);
+                }
+            }
+            return sequence;
+        }
+        //----------------------------------------------
+        Sprite[] BuildFrames(SpriteAtlas atlas, string label, System.Collections.Generic.List<Sprite> sprites)
+        {
+            var packables = SpriteAtlasExtensions.GetPackables(atlas);
 
             System.Collections.Generic.HashSet<string> vSpriteNames = new System.Collections.Generic.HashSet<string>();
             foreach (var db in sprites)
@@ -190,12 +323,12 @@ namespace Framework.SpriteSeq
             vFrames.Sort((s1, s2) =>
             {
                 int i0 = 0;
-                int.TryParse(s1.name.Replace("(Clone)", "").Substring(seq.spriteLabel.Length), out i0);
+                int.TryParse(s1.name.Replace("(Clone)", "").Substring(label.Length), out i0);
                 int i1 = 0;
-                int.TryParse(s2.name.Replace("(Clone)", "").Substring(seq.spriteLabel.Length), out i1);
+                int.TryParse(s2.name.Replace("(Clone)", "").Substring(label.Length), out i1);
                 return i0 - i1;
             });
-            seq.frames = vFrames.ToArray();
+           return vFrames.ToArray();
         }
         //----------------------------------------------
         void OnUpdate()
@@ -204,16 +337,22 @@ namespace Framework.SpriteSeq
             if(m_bPreview)
             {
                 SpriteSequence seq = (SpriteSequence)target;
-                if (seq.frames == null || seq.frames.Length == 0 || seq.spriteRender == null) return;
+                if (seq.subSequences == null|| seq.spriteRender == null)
+                    return;
+                if (m_nPreviewSubIndex<0 || m_nPreviewSubIndex >= seq.subSequences.Length)
+                    return;
+                var subSeq = seq.subSequences[m_nPreviewSubIndex];
+                if (subSeq.frames == null)
+                    return;
                 m_fPlayTime += m_pTimer.deltaTime;
-                int frameCount = Mathf.FloorToInt(m_fPlayTime * seq.fps);
-                if (!seq.loop && frameCount >= seq.frames.Length)
+                int frameCount = Mathf.FloorToInt(m_fPlayTime * subSeq.fps);
+                if (!subSeq.loop && frameCount >= subSeq.frames.Length)
                 {
                     m_bPreview = false;
                     return;
                 }
-                frameCount = frameCount % seq.frames.Length;
-                seq.spriteRender.sprite = seq.frames[frameCount];
+                frameCount = frameCount % subSeq.frames.Length;
+                seq.spriteRender.sprite = subSeq.frames[frameCount];
             }
         }
     }

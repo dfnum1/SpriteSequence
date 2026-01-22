@@ -65,6 +65,7 @@
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Attributes\DisplayNameByFieldAttribute.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Utils\TickHandler.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Window\EditorWindowMgr.cs" />
+    <Compile Include="Assets\SpriteSequence\Runtime\FrameSortJob.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Attributes\DisableAttribute.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Attributes\InspectorAttribute.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Utils\UIDrawUtils.cs" />
@@ -73,6 +74,7 @@
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Attributes\NoListHeaderAttribute.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Attributes\CustomAttribute.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Utils\TimeArea.cs" />
+    <Compile Include="Assets\SpriteSequence\Runtime\FrameUpdateJob.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Attributes\BindSlotAttribute.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Window\EditorWindowBase.cs" />
     <Compile Include="Assets\SpriteSequence\EditorRuntime\EditorFramework\Utils\ZoomableArea.cs" />

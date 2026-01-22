@@ -113,7 +113,7 @@ namespace Framework.SpriteSeq
             }
         }
         //--------------------------------------------------------
-        public void SetSequenceRange(int guid,int begin, int end)
+        public void SetSequenceFrame(int guid,int frame)
         {
             if (m_vGuidKey == null)
                 return;
@@ -121,7 +121,20 @@ namespace Framework.SpriteSeq
             {
                 if (m_vRenders.TryGetValue(id, out var renderer))
                 {
-                    renderer.SetSequenceRange(guid, begin, end);
+                    renderer.SetSequenceFrame(guid, frame);
+                }
+            }
+        }
+        //--------------------------------------------------------
+        public void SetSequenceFrameRange(int guid, int begin, int end)
+        {
+            if (m_vGuidKey == null)
+                return;
+            if (m_vGuidKey.TryGetValue(guid, out var id))
+            {
+                if (m_vRenders.TryGetValue(id, out var renderer))
+                {
+                    renderer.SetSequenceFrameRange(guid, begin, end);
                 }
             }
         }
@@ -174,6 +187,33 @@ namespace Framework.SpriteSeq
                 if (m_vRenders.TryGetValue(id, out var renderer))
                 {
                     return renderer.IsVisible(guid);
+                }
+            }
+            return false;
+        }
+        //--------------------------------------------------------
+        public void SetPlayFrame(int guid, bool bPlay)
+        {
+            if (m_vGuidKey == null)
+                return;
+            if (m_vGuidKey.TryGetValue(guid, out var id))
+            {
+                if (m_vRenders.TryGetValue(id, out var renderer))
+                {
+                    renderer.SetPlayFrame(guid, bPlay);
+                }
+            }
+        }
+        //--------------------------------------------------------
+        public bool IsPlayFrame(int guid)
+        {
+            if (m_vGuidKey == null)
+                return false;
+            if (m_vGuidKey.TryGetValue(guid, out var id))
+            {
+                if (m_vRenders.TryGetValue(id, out var renderer))
+                {
+                    return renderer.IsPlayFrame(guid);
                 }
             }
             return false;

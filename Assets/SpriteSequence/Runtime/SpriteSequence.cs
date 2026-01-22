@@ -54,6 +54,8 @@ namespace Framework.SpriteSeq
         {
             if (subSequences == null || subSequences.Length <= 0)
                 return;
+            if (string.IsNullOrEmpty(label))
+                return;
             int useIndex = -1;
             for(int i=0; i< subSequences.Length; ++i)
             {
@@ -70,6 +72,11 @@ namespace Framework.SpriteSeq
             if(!m_bPlaying) StartCoroutine(Play());
         }
         //----------------------------------------------
+        public void Stop()
+        {
+            m_bPlaying = false;
+        }
+        //----------------------------------------------
         IEnumerator Play()
         {
             if (subSequences == null || subSequences.Length <= 0)
@@ -78,7 +85,7 @@ namespace Framework.SpriteSeq
             if (m_nSubSeqIndex < 0 || m_nSubSeqIndex >= subSequences.Length)
                 yield break;
 
-                m_bPlaying = true;
+            m_bPlaying = true;
             var sequence = subSequences[m_nSubSeqIndex];
             var delay = new WaitForSeconds(1f / Mathf.Max(1,sequence.fps));
             while (true)
@@ -92,6 +99,8 @@ namespace Framework.SpriteSeq
                 spriteRender.sprite = sequence.frames[m_nIndex];
                 m_nIndex = (m_nIndex + 1) % sequence.frames.Length;
                 if (!sequence.loop && m_nIndex == 0) break;
+                if(!m_bPlaying)
+                    break;
                 yield return delay;
             }
             m_bPlaying = false;

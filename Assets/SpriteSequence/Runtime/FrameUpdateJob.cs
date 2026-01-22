@@ -45,7 +45,8 @@ namespace Framework.SpriteSeq
                 //if (batch.isCulled)
                 //    continue;
 
-                batch.frame += dt * fps;
+                if(batch.playing)
+                    batch.frame += dt * fps;
                 if (batch.frame >= batch.sequenceEnd)
                     batch.frame = batch.sequenceBegin;
                 drawDatas[i] = batch;

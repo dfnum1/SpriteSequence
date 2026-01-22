@@ -44,6 +44,7 @@ namespace Framework.SpriteSeq
             public Vector2 centerOffset;
             public bool visible;
             public bool isCulled;
+            public bool playing;
         }
 
 
@@ -166,6 +167,7 @@ namespace Framework.SpriteSeq
             draw.sequenceEnd = subSequence.endFrame;
             draw.visible = true;
             draw.isCulled = false;
+            draw.playing = true;
             draw.order = order;
             draw.cullingSize = 0;
             draw.centerOffset = subSequence.centerOffset;
@@ -280,7 +282,32 @@ namespace Framework.SpriteSeq
             return m_arrNativeDraws[idx].visible;
         }
         //--------------------------------------------------------
-        public void SetSequenceRange(int guid, int begin, int end)
+        public void SetPlayFrame(int guid, bool bPlay)
+        {
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
+                return;
+            var draw = m_arrNativeDraws[idx];
+            draw.playing = bPlay;
+            m_arrNativeDraws[idx] = draw;
+        }
+        //--------------------------------------------------------
+        public bool IsPlayFrame(int guid)
+        {
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
+                return false;
+            return m_arrNativeDraws[idx].playing;
+        }
+        //--------------------------------------------------------
+        public void SetSequenceFrame(int guid, int frame)
+        {
+            if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
+                return;
+            var draw = m_arrNativeDraws[idx];
+            draw.frame = Mathf.Clamp(frame, draw.sequenceBegin, draw.sequenceEnd);
+            m_arrNativeDraws[idx] = draw;
+        }
+        //--------------------------------------------------------
+        public void SetSequenceFrameRange(int guid, int begin, int end)
         {
             if (!m_guidToIndex.IsCreated || !m_guidToIndex.TryGetValue(guid, out int idx))
                 return;
